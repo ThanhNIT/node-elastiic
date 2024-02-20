@@ -67,6 +67,40 @@ async function processDocuments() {
 }
 
 
+async function processPDFs(folderPath) {
+    try {
+        // Get list of PDF files in the folder
+        const pdfFiles = fs.readdirSync(folderPath).filter(file => file.endsWith('.pdf'));
+        const totalFiles = pdfFiles.length;
+        console.log('Total PDF files to process:', totalFiles);
+
+        let processedFiles = 0;
+
+        // Iterate over each PDF file
+        for (const file of pdfFiles) {
+            try {
+                const filePath = path.join(folderPath, file);
+
+                // Read content from PDF file
+                const content = await readPDF(filePath);
+
+                // Index content to Elasticsearch
+                await indexContent(file, filePath, content);
+
+                // Increment processed files count
+                processedFiles++;
+                console.log(`Processed ${processedFiles} out of ${totalFiles} files`);
+            } catch (error) {
+                console.error(`Error processing file ${file}:`, error);
+            }
+        }
+
+        console.log('Processing completed');
+    } catch (error) {
+        console.error('Error reading PDF files:', error);
+    }
+}
+
 // Function to clear the Elasticsearch index
 async function clearIndex() {
     try {
@@ -96,6 +130,8 @@ async function readPDF(filePath) {
     }
 }
 
+
+
 // Function to read content from a DOCX file
 async function readDOCX(filePath) {
     try {
@@ -124,4 +160,4 @@ async function indexContent(docId, docUrl, content) {
 // Call the function to start processing documents
 // processDocuments();
 
-module.exports = { clearIndex, processDocuments}
+module.exports = { clearIndex, processDocuments, processPDFs}

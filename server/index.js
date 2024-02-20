@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const { readPDF, processDocuments, clearIndex } = require('./FileService');
+const { readPDF, processDocuments, clearIndex, processPDFs } = require('./FileService');
 const { elasticClient } = require('./config');
 
 const app = express();
@@ -28,7 +28,8 @@ app.get('/search', async (req, res) => {
 
 app.get('/indexing', async (req, res) => {  
   try {
-    processDocuments();
+    const { path } = req.query
+    processPDFs(path);
     res.json('Processing');
   } catch (error) {
     console.error(error);
