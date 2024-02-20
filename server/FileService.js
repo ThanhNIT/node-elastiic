@@ -69,13 +69,16 @@ async function processDocuments() {
 
 
 async function processPDFs(folderPath) {
+    // Clear the index before processing documents
+    await clearIndex();
+
     try {
         // Get list of PDF files in the folder
         const pdfFiles = fs.readdirSync(folderPath).filter(file => file.endsWith('.pdf'));
         const totalFiles = pdfFiles.length;
         console.log('Total PDF files to process:', totalFiles);
 
-        let processedFiles = 0;
+        let bulkBody = [];
 
         // Iterate over each PDF file
         for (const file of pdfFiles) {
@@ -85,15 +88,25 @@ async function processPDFs(folderPath) {
                 // Read content from PDF file
                 const content = await readPDF(filePath);
 
-                // Index content to Elasticsearch
-                await indexContent(file, filePath, content);
+                // Add document to bulk body
+                bulkBody.push({ index: { _index: indexName } });
+                bulkBody.push({ docId: file, docUrl: filePath, content: content });
 
-                // Increment processed files count
-                processedFiles++;
-                console.log(`Processed ${processedFiles} out of ${totalFiles} files`);
+                console.log(`Added ${file} to bulk body`);
+
+                // If bulk body size exceeds a certain threshold, perform bulk indexing
+                if (bulkBody.length >= 1000) {
+                    await bulkIndexDocuments(bulkBody);
+                    bulkBody = [];
+                }
             } catch (error) {
                 console.error(`Error processing file ${file}:`, error);
             }
+        }
+
+        // Perform bulk indexing for any remaining documents in the bulk body
+        if (bulkBody.length > 0) {
+            await bulkIndexDocuments(bulkBody);
         }
 
         console.log('Processing completed');
@@ -101,6 +114,32 @@ async function processPDFs(folderPath) {
         console.error('Error reading PDF files:', error);
     }
 }
+
+async function bulkIndexDocuments(bulkBody) {
+    try {
+        const { body: bulkResponse } = await elasticClient.bulk({ refresh: true, body: bulkBody });
+
+        if (bulkResponse.errors) {
+            const erroredDocuments = [];
+            // A useful way to handle errors
+            bulkResponse.items.forEach((action, i) => {
+                const operation = Object.keys(action)[0];
+                if (action[operation].error) {
+                    erroredDocuments.push({
+                        status: action[operation].status,
+                        error: action[operation].error,
+                        operation: bulkBody[i * 2],
+                        data: bulkBody[i * 2 + 1]
+                    });
+                }
+            });
+            console.log('Errored documents:', erroredDocuments);
+        }
+    } catch (error) {
+        console.error('Error performing bulk indexing:', error);
+    }
+}
+
 
 // Function to clear the Elasticsearch index
 async function clearIndex() {
