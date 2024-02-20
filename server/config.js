@@ -5,7 +5,7 @@ const mongoURL = 'mongodb+srv://ThanhNguyen:thanhnguyen@springbootrestful.xlacd.
 const client = new MongoClient(mongoURL);
 
 // Create an Elasticsearch client
-const elasticClient = new Client({ host: 'https://localhost:9200', httpAuth: 'elastic:6D2nBr9lMXfLHf17P-cY', });
+const elasticClient = new Client({ host: 'https://45.118.132.207/:9200', httpAuth: 'elastic:6D2nBr9lMXfLHf17P-cY', });
 
 module.exports = {
     client, elasticClient
