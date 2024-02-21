@@ -54,9 +54,11 @@ async function searchDocuments(query) {
     body: {
       query: {
         match: {
-          content: query
+          content: `*${query}*`
         }
-      }
+      },
+      size: 10000,
+      "_source": ["docId"]
     }
   });
   
